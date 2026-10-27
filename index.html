@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0C0E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Хогвартс: интерактивная книга</title>
+<style>
+:root, [data-theme="dark"] {
+  --bg: #0B0C0E;
+  --stage: #15171B;
+  --sheet: #101215;
+  --fg: #EDE7DC;
+  --muted: #8B857A;
+  --dim: #5E594F;
+  --amber: #E0A458;
+  --amber-soft: rgba(224, 164, 88, 0.75);
+  --card-bg: rgba(237, 231, 220, 0.055);
+  --card-border: rgba(237, 231, 220, 0.13);
+  --frame-grad: linear-gradient(158deg, #2C333B 0%, #171B20 46%, #0D0F12 100%);
+  --beat-fg: #F2ECE1;
+  --scrim: linear-gradient(transparent, rgba(11, 12, 14, 0.9));
+  --grain-opacity: 0.04;
+  --grain-blend: screen;
+  --ui: -apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --prose: "Charter", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --reader: 18px;
+}
+
+[data-theme="light"] {
+  --bg: #EFE8DA;
+  --stage: #E5DCC8;
+  --sheet: #ECE4D2;
+  --fg: #2B251C;
+  --muted: #7A6F5D;
+  --dim: #9A8D75;
+  --amber: #B3762B;
+  --amber-soft: rgba(179, 118, 43, 0.8);
+  --card-bg: rgba(43, 37, 28, 0.045);
+  --card-border: rgba(43, 37, 28, 0.15);
+  --frame-grad: linear-gradient(158deg, #CDC2A9 0%, #BDB197 46%, #ABA084 100%);
+  --beat-fg: #241E14;
+  --scrim: linear-gradient(transparent, rgba(239, 232, 218, 0.92));
+  --grain-opacity: 0.055;
+  --grain-blend: multiply;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--ui);
+  font-size: var(--reader);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+
+h1, h2, h3 {
+  font-family: var(--prose);
+  font-weight: 500;
+  color: var(--fg);
+  line-height: 1.3;
+  margin: 0 0 8px;
+  letter-spacing: 0.005em;
+}
+
+h1 { font-size: 1.15rem; }
+h2 { font-size: 1.35rem; }
+h3 {
+  font-family: var(--ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 18px 0 8px;
+}
+
+.app { display: flex; flex-direction: column; height: 100dvh; }
+
+/* Шапка */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top)) clamp(14px, 3vw, 22px) 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--card-border);
+  transition: padding 0.2s;
+  z-index: 5;
+}
+
+.topbar.compact { padding-top: 6px; padding-bottom: 6px; }
+.topbar.compact .logo { width: 32px; height: 32px; flex-basis: 32px; font-size: 1.05rem; }
+.topbar.compact .sub { display: none; }
+
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+.logo {
+  width: 38px; height: 38px; flex: 0 0 38px;
+  display: grid; place-items: center;
+  font-size: 1.25rem;
+  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid rgba(224, 164, 88, 0.4);
+  transition: width 0.2s, height 0.2s;
+}
+
+.brand-text { min-width: 0; }
+
+.brand-text h1 {
+  font-family: var(--prose);
+  font-weight: 500;
+  font-size: 1.02rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sub {
+  margin: 0;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Кнопки */
+.btn {
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--fg);
+  border-radius: 14px;
+  padding: 11px 14px;
+  font-family: var(--ui);
+  font-size: 0.92rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s;
+}
+
+.btn:hover { border-color: rgba(224, 164, 88, 0.5); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+
+.btn.primary {
+  background: var(--amber);
+  border-color: transparent;
+  color: #0B0C0E;
+  font-weight: 600;
+}
+
+.btn.big { width: 100%; min-height: 54px; font-size: 1.05rem; letter-spacing: 0.02em; }
+.btn.icon { min-width: 42px; min-height: 42px; font-size: 1.2rem; padding: 0; line-height: 1; }
+
+/* Лента */
+.chat {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: clamp(12px, 3vw, 22px) clamp(12px, 3vw, 22px) 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.msg { width: 100%; max-width: 46rem; margin: 0 auto; animation: rise 0.25s ease; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.msg.narrator {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--frame-grad);
+  min-height: 190px;
+  display: flex;
+  align-items: flex-end;
+  padding: 26px 20px 18px;
+}
+
+[data-theme="light"] .msg.narrator { border-color: rgba(43, 37, 28, 0.14); }
+
+.msg.narrator::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  pointer-events: none;
+}
+
+.msg.narrator::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: var(--grain-blend);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.msg.narrator .text {
+  position: relative;
+  font-family: var(--prose);
+  font-size: calc(var(--reader) * 0.92);
+  line-height: 1.6;
+  color: var(--beat-fg);
+  white-space: pre-line;
+}
+
+.msg.char {
+  display: grid;
+  grid-template-columns: 3px 1fr;
+  column-gap: 10px;
+  align-items: start;
+  padding: 4px 2px;
+}
+
+.msg.char::before {
+  content: "";
+  grid-column: 1;
+  grid-row: 1;
+  width: 3px;
+  height: 15px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--amber);
+  opacity: 0.75;
+}
+
+.msg.char .name {
+  grid-column: 2;
+  grid-row: 1;
+  font-family: var(--ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--amber-soft);
+  margin-bottom: 2px;
+}
+
+.msg.char .text {
+  grid-column: 2;
+  grid-row: 2;
+  font-family: var(--prose);
+  font-size: calc(var(--reader) * 0.86);
+  line-height: 1.55;
+  color: var(--fg);
+  white-space: normal;
+}
+
+.msg.user {
+  align-self: flex-end;
+  max-width: 92%;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: rgba(224, 164, 88, 0.07);
+  border: 1px solid rgba(224, 164, 88, 0.22);
+  white-space: normal;
+}
+
+[data-theme="light"] .msg.user { background: rgba(179, 118, 43, 0.1); }
+
+.msg.user::before {
+  content: "";
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 36%, #C9A46A 0 40%, #6E5943 41% 100%);
+}
+
+.msg.user .text {
+  font-family: var(--prose);
+  font-size: calc(var(--reader) * 0.86);
+  line-height: 1.45;
+}
+
+.msg.user .text::before {
+  content: "вы";
+  display: block;
+  font-family: var(--ui);
+  font-size: 0.58rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 2px;
+}
+
+.msg.card {
+  text-align: center;
+  background: none;
+  border: 0;
+  padding: 14px 12px 4px;
+  white-space: normal;
+}
+
+.card-kicker {
+  font-family: var(--ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.card-title {
+  font-family: var(--prose);
+  font-weight: 500;
+  font-size: 1.35rem;
+  color: var(--fg);
+  margin-top: 4px;
+}
+
+.msg.illus {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1.5px solid rgba(224, 164, 88, 0.7);
+  white-space: normal;
+}
+
+.illus-art {
+  min-height: 220px;
+  display: flex;
+  align-items: flex-end;
+  padding: 18px;
+  background:
+    radial-gradient(400px 200px at 75% 20%, rgba(224, 164, 88, 0.16), transparent 58%),
+    radial-gradient(350px 250px at 20% 80%, rgba(110, 139, 158, 0.14), transparent 62%),
+    var(--frame-grad);
+  font-family: var(--prose);
+  font-size: 1.15rem;
+  color: var(--beat-fg);
+  position: relative;
+}
+
+.illus-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: var(--grain-blend);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.illus-cap {
+  padding: 12px 16px;
+  font-family: var(--ui);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--muted);
+  background: var(--stage);
+}
+
+/* Нижний док */
+.dock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px clamp(12px, 3vw, 22px) calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--card-border);
+  background: var(--sheet);
+}
+
+.dock-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.dock-row .btn { min-height: 46px; font-size: 0.88rem; padding: 8px 6px; }
+
+@media (min-width: 480px) {
+  .dock-row { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Шторки */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 7, 8, 0.72);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.overlay.show { display: flex; }
+.overlay.sheet { align-items: flex-end; padding: 0; }
+
+.overlay.sheet .modal {
+  width: 100%;
+  border-radius: 20px 20px 0 0;
+  border-bottom: 0;
+  padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  animation: up 0.22s ease;
+}
+
+@keyframes up {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (min-width: 640px) {
+  .overlay.sheet { align-items: center; padding: 16px; }
+  .overlay.sheet .modal {
+    width: min(560px, 100%);
+    border-radius: 18px;
+    border-bottom: 1px solid var(--card-border);
+  }
+}
+
+.modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 92dvh;
+  overflow-y: auto;
+  background: var(--sheet);
+  border: 1px solid var(--card-border);
+  padding: 20px;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.muted { color: var(--muted); }
+.small { font-size: 0.82rem; }
+.err { color: var(--amber); min-height: 1.2em; margin: 6px 0 0; font-size: 0.85rem; }
+
+.label {
+  margin: 16px 0 4px;
+  font-family: var(--ui);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+
+.field span {
+  font-family: var(--ui);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.field input, .field textarea {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--fg);
+  border-radius: 12px;
+  padding: 13px 14px;
+  font-family: var(--prose);
+  font-size: 1.02rem;
+  resize: vertical;
+}
+
+.field input:focus, .field textarea:focus {
+  outline: none;
+  border-color: rgba(224, 164, 88, 0.55);
+}
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions.static { margin: 12px 0 2px; }
+
+.chip {
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--fg);
+  border-radius: 999px;
+  padding: 11px 17px;
+  font-family: var(--ui);
+  font-size: 0.92rem;
+  min-height: 46px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.chip:hover { border-color: rgba(224, 164, 88, 0.5); }
+
+.chip.primary {
+  background: var(--amber);
+  border-color: transparent;
+  color: #0B0C0E;
+  font-weight: 600;
+}
+
+.chip.danger { border-color: rgba(224, 130, 90, 0.45); color: var(--amber); }
+.chip.danger.armed { background: rgba(224, 130, 90, 0.18); }
+
+.font-ind {
+  align-self: center;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  min-width: 48px;
+  text-align: center;
+}
+
+.menu-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+.menu-item {
+  text-align: left;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--fg);
+  border-radius: 14px;
+  padding: 13px 15px;
+  font-family: var(--ui);
+  font-size: 0.95rem;
+  min-height: 48px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.menu-item:hover { border-color: rgba(224, 164, 88, 0.5); }
+
+.talk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  max-height: 46dvh;
+  overflow-y: auto;
+}
+
+.talk-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--fg);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-family: var(--prose);
+  font-size: 0.95rem;
+  min-height: 48px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.talk-item:hover { border-color: rgba(224, 164, 88, 0.5); }
+
+.badge {
+  font-family: var(--ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--amber);
+  border: 1px solid rgba(224, 164, 88, 0.5);
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.talk-item.far .badge { color: var(--dim); border-color: var(--card-border); }
+
+.stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+
+.stat dt {
+  font-family: var(--ui);
+  font-size: 0.64rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--dim);
+  align-self: center;
+}
+
+.stat dd { margin: 0; font-family: var(--prose); font-size: 0.98rem; }
+
+.relation { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+.rel-name { min-width: 78px; font-family: var(--prose); font-size: 0.92rem; }
+
+.rel-bar {
+  flex: 1 1 auto;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(237, 231, 220, 0.1);
+  overflow: hidden;
+}
+
+.rel-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--amber), #C9A46A);
+  border-radius: 999px;
+}
+
+.rel-val {
+  min-width: 28px;
+  text-align: right;
+  font-family: var(--ui);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.effects { margin: 8px 0 0; padding: 0 0 0 22px; list-style: none; }
+
+.effects li {
+  position: relative;
+  padding: 0 0 16px;
+  font-family: var(--prose);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--fg);
+}
+
+.effects li::before {
+  content: "";
+  position: absolute;
+  left: -21px;
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sheet);
+  border: 1px solid rgba(224, 164, 88, 0.65);
+}
+
+.effects li::after {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 12px;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(rgba(224, 164, 88, 0.4), rgba(224, 164, 88, 0.06));
+}
+
+.effects li:last-child::after { display: none; }
+.effects li.muted { color: var(--dim); }
+
+.help {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-family: var(--prose);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.help li { margin: 8px 0; }
+.help strong { font-family: var(--ui); font-size: 0.88em; letter-spacing: 0.04em; }
+
+@media (max-width: 380px) {
+  h1 { font-size: 1.02rem; }
+  .btn.big { font-size: 1rem; }
+}
+
+/* Keep messages at their content height inside the scrolling chat. */
+.app { overflow: hidden; }
+.topbar, .dock { flex-shrink: 0; }
+.chat { min-height: 0; }
+.chat > .msg { flex: 0 0 auto; }
+.illus-art.has-image { display: block; min-height: 0; padding: 0; }
+.illus-art.has-image::after { content: none; }
+.illus-image { display: block; width: 100%; height: auto; }
+.illus-fallback { display: block; padding: 18px; color: inherit; }
+
+/* Continuous reading layout, identical for dialogue, actions and narration. */
+.chat { gap: 1.6em; background: var(--bg); }
+.chat > .msg.narrator, .chat > .msg.char, .chat > .msg.user {
+  display: block; flex: 0 0 auto; width: 100%; max-width: 46rem;
+  margin: 0 auto; padding: 0; min-height: 0; border: 0;
+  border-radius: 0; background: transparent; box-shadow: none;
+  align-self: auto; overflow: visible;
+}
+.chat > .msg.narrator::before, .chat > .msg.narrator::after,
+.chat > .msg.char::before, .chat > .msg.user::before { content: none; }
+.chat > .msg.narrator .text, .chat > .msg.char .text, .chat > .msg.user .text {
+  position: static; font-family: var(--prose); font-size: var(--reader);
+  line-height: 1.7; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.chat > .msg.char .name, .chat > .msg .who, .chat > .msg.user .text::before {
+  display: block; font-family: var(--ui); font-size: .66rem; line-height: 1.5;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--amber);
+  margin: 0 0 .35rem;
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar" id="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">⚡</div>
+      <div class="brand-text">
+        <h1>Хогвартс: интерактивная книга</h1>
+        <p class="sub" id="progressLine">Демо-режим без AI · эпизод 1 из 33</p>
+      </div>
+    </div>
+    <button class="btn icon" id="btnMenu" type="button" aria-label="Меню">☰</button>
+  </header>
+
+  <main class="chat" id="chat" aria-live="polite" aria-label="Лента истории"></main>
+
+  <footer class="dock">
+    <button class="btn big primary" id="btnAdvance" type="button">Дальше →</button>
+    <div class="dock-row">
+      <button class="btn" id="btnTalk" type="button">С героем</button>
+      <button class="btn" id="btnSay" type="button">Реплика</button>
+      <button class="btn" id="btnLook" type="button">Осмотреться</button>
+      <button class="btn" id="btnIllus" type="button">Иллюстрация</button>
+    </div>
+  </footer>
+</div>
+
+<div class="overlay show sheet" id="onboarding">
+  <div class="modal">
+    <h2 id="obTitle">Перед началом познакомимся</h2>
+    <p class="muted small" id="obText">Фанатская интерактивная адаптация «Гарри Поттер и узник Азкабана».
+      <strong>Демо-режим:</strong> сцены и реплики заранее написаны вручную, AI-модель не используется.</p>
+    <label class="field">
+      <span>Как тебя зовут? Имя или прозвище</span>
+      <input id="nameInput" type="text" maxlength="40" placeholder="Например: Алекс" autocomplete="off">
+    </label>
+    <p class="err" id="nameError" role="alert"></p>
+    <p class="label">Как к тебе обращаться?</p>
+    <div class="actions static">
+      <button class="chip primary" type="button" data-form="m">В мужском роде</button>
+      <button class="chip primary" type="button" data-form="f">В женском роде</button>
+      <button class="chip primary" type="button" data-form="n">Без указания рода</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay sheet" id="sheetMenu">
+  <div class="modal">
+    <h2>Меню</h2>
+    <div class="menu-list">
+      <button class="menu-item" id="miStatus" type="button">📊 Статус прохождения</button>
+      <button class="menu-item" id="miHelp" type="button">📖 Как это работает</button>
+      <button class="menu-item" id="miProfile" type="button">👤 Изменить профиль</button>
+      <button class="menu-item" id="miPause" type="button">⏸ Поставить на паузу</button>
+      <button class="menu-item" id="installApp" type="button">Установить на телефон</button>
+      <button class="menu-item" id="miAI" type="button">🤖 Подключить AI (n8n)</button>
+    </div>
+    <p class="muted small" id="aiStatus">Демо-режим: ответы без AI. Можно подключить n8n-воркфлоу.</p>
+    <p class="label">Размер шрифта</p>
+    <div class="actions static">
+      <button class="chip" id="fontMinus" type="button">A −</button>
+      <span class="font-ind" id="fontInd">18px</span>
+      <button class="chip" id="fontPlus" type="button">A +</button>
+    </div>
+    <p class="label">Тема</p>
+    <div class="actions static">
+      <button class="chip primary" id="themeToggle" type="button">Сменить на светлую</button>
+    </div>
+    <div class="actions static">
+      <button class="chip danger" id="miReset" type="button">Начать заново</button>
+      <button class="chip primary" type="button" data-close="sheetMenu">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay sheet" id="sheetTalk">
+  <div class="modal">
+    <h2>С кем поговорить?</h2>
+    <label class="field">
+      <span>Поиск по имени</span>
+      <input id="talkSearch" type="search" placeholder="Гарри, Люпин, Хагрид…" autocomplete="off">
+    </label>
+    <p class="muted small">В AI-режиме присутствие персонажа определяется текущим сюжетом. Можно обратиться к любому герою; история учитывает возможность встречи.</p>
+    <div class="talk-list" id="talkList"></div>
+    <div class="actions static">
+      <button class="chip primary" type="button" data-close="sheetTalk">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay sheet" id="sheetSay">
+  <div class="modal">
+    <h2>Реплика или действие</h2>
+    <label class="field">
+      <span>Что ты говоришь или делаешь?</span>
+      <textarea id="sayText" rows="5" maxlength="300" placeholder="Например: «Я думаю, стоит доверить это Хагриду.»"></textarea>
+    </label>
+    <p class="muted small">В демо-режиме текст попадает в историю, отвечает заготовленная реакция. С AI-режимом отвечает модель.</p>
+    <div class="actions static">
+      <button class="chip primary" id="saySend" type="button">Отправить</button>
+      <button class="chip" type="button" data-close="sheetSay">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay sheet" id="sheetAI">
+  <div class="modal">
+    <h2>Подключить AI через n8n</h2>
+    <p class="muted small">Укажите адрес вебхука воркфлоу. Приложение отправляет ход и получает ответ модели:
+      реплики героев, последствия и прогресс. Ключи LLM остаются на сервере n8n.</p>
+    <label class="field">
+      <span>Адрес вебхука (turn)</span>
+      <input id="aiUrlInput" type="url" placeholder="https://bunkanepudick.beget.app/webhook/hogwarts-turn" autocomplete="off">
+    </label>
+    <p class="muted small">Для иллюстраций воркфлоу должен обслуживать вебхук hogwarts-image на том же сервере.</p>
+    <div class="actions static">
+      <button class="chip primary" id="aiConnect" type="button">Подключить</button>
+      <button class="chip" type="button" data-close="sheetAI">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay sheet" id="modalStatus">
+  <div class="modal">
+    <h2>Статус прохождения</h2>
+    <dl class="stat">
+      <dt>Имя</dt><dd id="stName">—</dd>
+      <dt>Обращение</dt><dd id="stForm">—</dd>
+      <dt>Эпизод</dt><dd id="stScene">—</dd>
+      <dt>Событий в эпизоде</dt><dd id="stEvents">—</dd>
+      <dt>Режим</dt><dd id="stMode">—</dd>
+    </dl>
+    <h3>Отношения</h3>
+    <div id="stRelations"></div>
+    <h3>Запомненные последствия</h3>
+    <ul class="effects" id="stEffects"></ul>
+    <div class="actions static">
+      <button class="chip primary" type="button" data-close="modalStatus">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay sheet" id="modalHelp">
+  <div class="modal">
+    <h2>Как это работает</h2>
+    <ul class="help">
+      <li><strong>Дальше</strong> — показать следующее событие с переходом. Событие не продвигается само от числа реплик.</li>
+      <li><strong>С героем</strong> — диалог с любым персонажем реестра (37 героев). Если герой в сцене — он отвечает; если нет — приложение не телепортирует его.</li>
+      <li><strong>Реплика</strong> — свободный текст: действие, вопрос, реплика. Попытка не считается автоматическим успехом.</li>
+      <li><strong>Осмотреться</strong> — зарисовка текущего места без влияния на сюжет.</li>
+      <li><strong>Иллюстрация</strong> — изображение текущего момента (в демо — заглушка).</li>
+      <li><strong>Меню</strong> — статус, пауза, профиль, размер шрифта, тема, AI-режим, рестарт.</li>
+      <li>Повествование от второго лица: приложение не назначает тебе мысли и действия, которые ты не выбирал.</li>
+    </ul>
+    <p class="muted small">Полная версия подключает AI-модель через n8n-воркфлоу (hogwarts-web-workflow.json) и иллюстрации Polza.</p>
+    <div class="actions static">
+      <button class="chip primary" type="button" data-close="modalHelp">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+"use strict";
+
+// ================= ДАННЫЕ =================
+
+const ROSTER = {
+  harry: { name: "Гарри", dat: "Гарри" },
+  ron: { name: "Рон", dat: "Рону" },
+  hermione: { name: "Гермиона", dat: "Гермионе" },
+  lupin: { name: "Римус Люпин", dat: "Римусу Люпину" },
+  hagrid: { name: "Хагрид", dat: "Хагриду" },
+  dumbledore: { name: "Дамблдор", dat: "Дамблдору" },
+  mcgonagall: { name: "Макгонагалл", dat: "Макгонагалл" },
+  snape: { name: "Снейп", dat: "Снейпу" },
+  draco: { name: "Драко Малфой", dat: "Драко Малфою" },
+  neville: { name: "Невилл Долгопупс", dat: "Невиллу Долгопупсу" },
+  ginny: { name: "Джинни Уизли", dat: "Джинни Уизли" },
+  fred: { name: "Фред Уизли", dat: "Фреду Уизли" },
+  george: { name: "Джордж Уизли", dat: "Джорджу Уизли" },
+  percy: { name: "Перси Уизли", dat: "Перси Уизли" },
+  molly: { name: "Молли Уизли", dat: "Молли Уизли" },
+  arthur: { name: "Артур Уизли", dat: "Артуру Уизли" },
+  sirius: { name: "Сириус Блэк", dat: "Сириусу Блэку" },
+  peter: { name: "Питер Петтигрю", dat: "Питеру Петтигрю" },
+  buckbeak: { name: "Клювокрыл", dat: "Клювокрылу" },
+  trelawney: { name: "Сивилла Трелони", dat: "Сивилле Трелони" },
+  flitwick: { name: "Филиус Флитвик", dat: "Филиусу Флитвику" },
+  sprout: { name: "Помона Спраут", dat: "Помоне Спраут" },
+  filch: { name: "Аргус Филч", dat: "Аргусу Филчу" },
+  pince: { name: "Ирма Пинс", dat: "Ирме Пинс" },
+  rosmerta: { name: "мадам Розмерта", dat: "мадам Розмерте" },
+  shacklebolt: { name: "Кингсли Шеклболт", dat: "Кингсли Шеклболту" },
+  fudge: { name: "Корнелиус Фадж", dat: "Корнелиусу Фаджу" },
+  ollivander: { name: "Гаррик Олливандер", dat: "Гаррику Олливандеру" },
+  cho: { name: "Чжоу Чанг", dat: "Чжоу Чанг" },
+  seamus: { name: "Шеймус Финниган", dat: "Шеймусу Финнигану" },
+  dean: { name: "Дин Томас", dat: "Дину Томасу" },
+  parvati: { name: "Парвати Патил", dat: "Парвати Патил" },
+  lavender: { name: "Лаванда Браун", dat: "Лаванде Браун" },
+  lee: { name: "Ли Джордан", dat: "Ли Джордану" },
+  wood: { name: "Оливер Вуд", dat: "Оливеру Вуду" },
+  pomfrey: { name: "Поппи Помфри", dat: "Поппи Помфри" },
+  other_character: { name: "другой персонаж", dat: "другому персонажу" }
+};
+
+const SCENES = [
+  { id: "train", title: "Хогвартс-экспресс", who: "ron",
+    events: ["За окном купе мелькают поля. Рон устраивает Коросту подальше от корзины с Живоглотом; Гермиона убирает книги с свободного места.", "Разговор возвращается к тревожным новостям: Сириус Блэк сбежал из Азкабана, и его разыскивают.", "Колёса скрежещут. Поезд останавливается вдали от станции; в купе резко холодает."],
+    say: "«Садись к нам! Мы как раз освободили место — пришлось попросить Гермиону убрать половину библиотеки в сумку.»",
+    look: "В коридоре снуют первокурсники; от тележки ведёт запах пирожных, и кто-то далеко в вагоне распевает школьную песню." },
+  { id: "dementor", title: "Остановка поезда", who: "hermione",
+    events: ["Лампы гаснут. Дверь купе открывается, и в проёме возникает высокая закутанная фигура. Гарри бледнеет; спавший в углу Люпин поднимается.", "Гарри теряет сознание. Люпин отгоняет дементора, холод отступает. Через несколько мгновений Гарри начинает приходить в себя."],
+    say: "«Гарри, ты весь белый! Что с тобой? Ты слышал что-то? Потому что мы — нет, только почувствовали холод...»",
+    look: "Лампы мигают и снова горят. В проёме ещё стоит холод, а на полу — пустая обёртка от шоколада." },
+  { id: "recovery", title: "После дементора", who: "harry",
+    events: ["Люпин раздаёт шоколад. Свет вновь горит; Гарри пытается понять, что произошло и почему остальные не слышали того же, что он.", "Поезд снова идёт к Хогвартсу. Рон и Гермиона остаются рядом с Гарри, пока за окном появляются огни.", "Поезд прибывает на станцию. Начинается дорога к замку; после пережитого его освещённые окна кажутся особенно желанными."],
+    say: "«Я слышал крики... будто кто-то умирал. Вы — нет? Только холод? Странно. Совсем странно.»",
+    look: "Люпин делит шоколад на кусочки. За окном снова поля, но в купе всё ещё стоит неподвижный, неестественный холод." },
+  { id: "feast", title: "Первый вечер", who: "hermione",
+    events: ["Позже в Большом зале звучат приветственные объявления. Дементоры будут охранять территорию; Люпин станет преподавать защиту от тёмных искусств, Хагрид — уход за магическими существами.", "На столах появляется ужин. Вокруг звенят приборы; друзья обсуждают новых преподавателей и охрану школы.", "Пир заканчивается. Ученики расходятся по факультетам, а друзья собираются отдохнуть перед первым учебным днём."],
+    say: "«Дементоры у стен школы... Дамблдор считает, что это безопасно? Я не уверена. Хотя, конечно, Сириус Блэк — не шутка.»",
+    look: "Большой зал сверкает свечами. Хагрид на кафедре преподавателей едва помещается за столом и подмигивает вам." },
+  { id: "commonroom", title: "Гостиная", who: "ron",
+    events: ["За портретом открывается гриффиндорская гостиная. Огонь потрескивает в камине; Гарри, Рон и Гермиона находят место рядом с креслами.", "В гостиной становится тише. Друзья прощаются до утра, оставляя разговоры о тревожных новостях на другой день."],
+    say: "«Лучше выспимся. Завтра первый день, а у Гермионы расписание уже на три недели вперёд. У меня — только на завтрак.»",
+    look: "Камин потрескивает; у окна кто-то играет в шахматы, и одна из фигур недовольно стучит по доске." },
+  { id: "divination", title: "Прорицание", who: "hermione",
+    events: ["На следующий день Гарри и Рон поднимаются в душную башню прорицания. На столиках стоят чашки; Гермиона с сомнением оглядывает комнату.", "Трелони рассматривает чашку Гарри и говорит о зловещем предзнаменовании — Гриме. После урока друзья спорят, стоит ли верить такому толкованию."],
+    say: "«Грим — предвестник смерти? Это ненаучно, Гарри. Просто чашка и немного воображения. Хотя... она выглядела напуганной.»",
+    look: "В башне жарко и душно; на столиках — чашки с чайной гущей, и пахнет чем-то сладковатым и тяжёлым." },
+  { id: "buckbeak", title: "Первый урок Хагрида", who: "ron",
+    events: ["На уроке у Хагрида появляются гиппогрифы. Он объясняет, как проявить уважение к существу, прежде чем приближаться.", "Гарри удаётся приблизиться к Клювокрылу и совершить короткий полёт. Затем Малфой пренебрегает предупреждением Хагрида, и гиппогриф ранит его руку."],
+    say: "«Только не злись на него. Хагрид сказал: поклон, жди, пока кивнёт. Малфой, конечно, считал себя исключением...»",
+    look: "Гиппогрифы гордо расхаживают по загону. Клювокрыл не сводит с вас оранжевых глаз и слегка наклоняет голову." },
+  { id: "boggart", title: "Урок Люпина", who: "harry",
+    events: ["На защите Люпин показывает шкаф с боггартом. Ученики учатся превращать пугающий образ в смешной.", "Во время упражнения Люпин вмешивается, прежде чем Гарри сталкивается с боггартом. После урока Гарри остаётся с вопросами, хотя занятия впервые кажутся по-настоящему полезными."],
+    say: "«Почему он остановил упражнение именно передо мной? Он знал, что появится. Как он мог знать?»",
+    look: "Шкаф в углу дрожит так, что лязгает замок. Класс затаил дыхание, готовясь смеяться." },
+  { id: "autumn", title: "Осенние заботы", who: "hermione",
+    events: ["Осень приносит домашние задания и тренировки. Гермиона берёт на себя слишком много занятий, а Рон всё чаще раздражается из-за Живоглота.", "Хагрид переживает из-за жалобы Малфоев. Друзья решают помочь ему найти сведения для защиты Клювокрыла."],
+    say: "«У меня три доклада к пятнице, два перевода и таблица лунных фаз. И всё равно я успею помочь Хагриду. Обязательно успею.»",
+    look: "В коридорах пахнет сыростью и листьями. Доска объявлений пестрит графиками матчей и предупреждениями о нахождении за пределами замка." },
+  { id: "hogsmeade", title: "Первый Хогсмид", who: "harry",
+    events: ["Наступает день поездки в Хогсмид. У Гарри нет подписанного разрешения, и он остаётся в замке, пока Рон и Гермиона уходят в деревню.", "Позже Гарри рассказывает друзьям о разговоре с Люпином. Оказывается, преподаватель остановил упражнение не из страха перед Волдемортом: Гарри больше всего боится дементоров."],
+    say: "«Идите, я не против. Правда. Просто... расскажите потом, что нового в Медовом Рю. Хотя бы так.»",
+    look: "Группы учеников с жетонами выходят из ворот. Замок неожиданно пустой и тихий, как в воскресное утро." },
+  { id: "portrait", title: "Хэллоуин", who: "ron",
+    events: ["После праздничного вечера ученики находят повреждённый портрет Полной Дамы. Становится известно, что Сириус Блэк проник в замок.", "Всю школу собирают на ночь в Большом зале, пока преподаватели обыскивают помещения. Гриффиндорцы обсуждают, как Блэк смог пройти охрану."],
+    say: "«Он был прямо здесь, внутри замка. Я всю ночь не сомкнул глаз. Если он смог пройти мимо дементоров... что уж говорить о портретах.»",
+    look: "Портрет Полной Дамы изрезан клочьями. Преподаватели с фонарями обыскивают каждый угол, а тролль у входа клюёт носом." },
+  { id: "quidditch_loss", title: "Матч с Пуффендуем", who: "hermione",
+    events: ["Дождь и ветер сопровождают матч против Пуффендуя. На поле появляются дементоры; Гарри падает с метлы.", "Позже в больничном крыле друзья рассказывают Гарри о поражении и о том, что его Нимбус разбился после столкновения с Гремучей ивой."],
+    say: "«Это были не просто дементоры, Гарри. Что-то было не так. Но это не конец сезона — и Нимбус... ну, мы найдём способ.»",
+    look: "Дождь стекает ручьями по окнам больничного крыла. Где-то далеко неподвижно стоит Гремучая ива." },
+  { id: "map", title: "Карта", who: "ron",
+    events: ["Фред и Джордж передают Гарри необычную карту. На ней видны коридоры, тайные проходы и перемещения людей по замку.", "С помощью карты Гарри попадает в Хогсмид и встречается с Роном и Гермионой. Для него это первый настоящий взгляд на деревню."],
+    say: "«Фред с Джорджом передали: не попадись Филчу. Карта показывает даже его — смотри, сейчас он у библиотеки!»",
+    look: "На пергаменте расходятся чернильные тропинки. Мелкие имена бегут по коридорам, и кто-то тихо хохочет из-под листа." },
+  { id: "revelation", title: "Подслушанный разговор", who: "harry",
+    events: ["В «Трёх мётлах» Гарри прячется и слышит разговор взрослых. Сириуса называют его крёстным отцом и человеком, якобы предавшим Поттеров.", "Позже Гарри делится услышанным с друзьями. Рон и Гермиона пытаются удержать его от необдуманных поступков; эти обвинения пока не проверены ими."],
+    say: "«Он был крёстным отцом. Он знал моих родителей. И предал их. Скажи — ты слышал это так же, как я?»",
+    look: "У камина в «Трёх мётлах» жарко, но от слов про Сириуса Блэка внутри становится ледяно." },
+  { id: "firebolt", title: "Рождество", who: "hermione",
+    events: ["На Рождество Гарри получает Молнию без подписи отправителя. Радость быстро превращается в спор о том, безопасен ли подарок.", "Гермиона сообщает о метле Макгонагалл. Молнию забирают для проверки; Гарри и Рон сердятся, хотя Гермиона уверена, что защищает друга."],
+    say: "«Я не хотела причинить неприятностей. Просто метла могла быть проклятой! Анонимный подарок — это же очевидный риск!»",
+    look: "Подарочная коробка большая и тяжёлая; на этикетке ни имени, ни почерка — только идеально ровные буквы." },
+  { id: "patronus", title: "Занятия Патронусом", who: "harry",
+    events: ["После каникул Люпин начинает учить Гарри заклинанию Патронуса. Для тренировки используется боггарт в облике дементора.", "Попытки даются тяжело: воспоминания о голосах мешают сосредоточиться. Гарри постепенно учится удерживать защитное заклинание."],
+    say: "«Ещё раз. Я могу больше. Нужно только вспомнить верное — то самое, сильное воспоминание. Один раз получится, и будет легче.»",
+    look: "Боггарт в облике дементора медленно поднимается из шкафа. Воздух становится ледяным, и стены словно темнеют." },
+  { id: "scabbers", title: "Пропажа Коросты", who: "ron",
+    events: ["Короста исчезает. Рон находит следы, которые считает доказательством вины Живоглота, и ссорится с Гермионой.", "Друзьям всё труднее держаться вместе. На фоне этой ссоры продолжается подготовка к разбирательству по делу Клювокрыла."],
+    say: "«Он просто исчез. А у неё — кот, который ненавидел его с первого дня. Кровь и шерсть на полу — что ещё нужно?»",
+    look: "На полу спальни — клочья серой шерсти. Окно приоткрыто, и занавеска едва заметно колышется." },
+  { id: "sirius_bedroom", title: "Ночное проникновение", who: "harry",
+    events: ["Одной ночью Рон просыпается и обнаруживает у своей кровати Сириуса Блэка с ножом. Блэк успевает скрыться.", "Выясняется, что пароль оказался доступен постороннему. В замке усиливают меры предосторожности; друзья обсуждают случившееся, не зная настоящей цели Блэка."],
+    say: "«Он стоял прямо над тобой? С ножом? И просто ушёл? Рон... что-то здесь не сходится. Совсем не сходится.»",
+    look: "Дверь спальни заперта заново. У входа дежурит Макгонагалл, и её мантия шуршит в тишине." },
+  { id: "spring", title: "Весенние перемены", who: "hermione",
+    events: ["Гермиона всё сильнее устаёт и в конце концов отказывается продолжать прорицание. Друзья снова стараются поддержать Хагрида.", "Молнию возвращают после проверки. Между друзьями постепенно становится меньше отчуждения, хотя дело Клювокрыла остаётся тяжёлой заботой."],
+    say: "«Я больше не буду ходить на прорицание. Хватит. У меня есть друзья важнее предсказаний — и дела важнее чайной гущи.»",
+    look: "Молнию вернули — она стоит у стены, сверкая новым блеском. За окном весна, но все ждут разбирательства по Клювокрылу." },
+  { id: "cup", title: "Кубок по квиддичу", who: "ron",
+    events: ["Наступает решающий матч против Слизерина. Гарри выходит на поле с Молнией; вокруг трибун гремят голоса.", "Гриффиндор выигрывает Кубок по квиддичу. Праздник на время оттесняет страхи и школьные ссоры."],
+    say: "«Мы выиграли! Я до сих пор не верю — Молния, Гарри! Кубок наш, и весь гриффиндорский стол сегодня гордится нами!»",
+    look: "Гриффиндорские знамёна трещат на ветру. Трибуны поют — даже проигравшие молчат лишь из вежливости." },
+  { id: "exams", title: "Экзамены", who: "hermione",
+    events: ["Учебный год подходит к экзаменам. Коридоры заполнены учениками с конспектами, а Гермиона выглядит особенно измотанной.", "После своего экзамена по прорицанию Гарри слышит, как Трелони неожиданно произносит предсказание о возвращении слуги Волдеморта. Позже она ничего об этом не помнит."],
+    say: "«Трелони произнесла пророчество? Во время экзамена? И не помнит? Это... это неправильно. Нужно рассказать Дамблдору.»",
+    look: "Коридоры набиты учащимися с конспектами. Кто-то зубрит формулы на ходу, а кто-то просто смотрит в стену." },
+  { id: "hagrid_evening", title: "Вечер у Хагрида", who: "ron",
+    events: ["Друзья узнают, что апелляция не спасла Клювокрыла. Они приходят поддержать Хагрида перед назначенным исполнением приговора.", "В хижине обнаруживается живая Короста. Когда приближаются взрослые, друзья уходят; вскоре позади слышится удар. Они думают, что Клювокрыл погиб."],
+    say: "«Смотри — на столе! Это же Короста, живая! Значит, я был неправ про Живоглота... а может, и неправ не во всём.»",
+    look: "В хижине жарко от камина, пахнет деревом и пирогом. Из леса доносится шаг — тяжёлый, размеренный." },
+  { id: "willow", title: "Гремучая ива", who: "hermione",
+    events: ["Короста вырывается у Рона. Большой чёрный пёс хватает Рона и утаскивает его в проход под Гремучей ивой.", "Гарри и Гермиона следуют через туннель и оказываются в Визжащей хижине. У Рона повреждена нога; рядом находится Сириус Блэк."],
+    say: "«Он утащил Рона под иву! Помнишь, как её обходить? Нам нужно идти — сейчас же, пока туннель открыт!»",
+    look: "Гремучая ива бьёт ветвями по земле. Внизу, под корнями, зияет тёмный вход в туннель." },
+  { id: "shack", title: "Визжащая хижина", who: "harry",
+    events: ["Гарри сталкивается с Сириусом, которого считает предателем. В хижину приходит Люпин; его поведение заставляет друзей сомневаться в привычной версии событий.", "Сириус и Люпин рассказывают о школьных друзьях и анимагах. Они утверждают, что Короста — Питер Петтигрю, а Сириус не предавал Поттеров."],
+    say: "«Скажи мне, что это правда. Что предал не ты. Что всё было иначе, чем говорили все эти годы.»",
+    look: "В избе холодно и пусто. Половицы дрожат под каждым шагом, а сквозь щели тянет ночным ветром." },
+  { id: "pettigrew", title: "Правда о Петтигрю", who: "ron",
+    events: ["В хижину вмешивается Снейп, но друзья обезоруживают его. Сириус и Люпин заставляют Коросту принять человеческий облик: перед ними Питер Петтигрю.", "Объяснения раскрывают подмену Хранителя тайны и предательство Петтигрю. Гарри не позволяет убить его: он хочет передать виновного властям и очистить имя Сириуса."],
+    say: "«Короста... это он? Все эти годы — это он?! Я держал предателя в кармане и кормил его с руки!»",
+    look: "На полу лежит человек, которого все считали крысой. У стены без сознания Снейп, и его плащ осел на полу лужей." },
+  { id: "moon", title: "Под полной луной", who: "hermione",
+    events: ["Группа выходит из туннеля. Полная луна появляется из-за облаков; Люпин, не принявший зелье, превращается в оборотня. Сириус в облике пса пытается отвлечь его.", "В суматохе Петтигрю сбегает. Рон остаётся травмированным; Гарри и Гермиона бросаются вслед за Сириусом."],
+    say: "«Луна! Люпин не принял зелье! Нам нужно бежать — сейчас же, держись ближе ко мне и не смотри назад!»",
+    look: "Облака расходятся, и серебряный свет заливает поляну. Воем рвётся тишина, и тени удлиняются до самых деревьев." },
+  { id: "lake", title: "У озера", who: "harry",
+    events: ["У озера Гарри и Гермиона находят Сириуса. Их окружают дементоры; попытка Гарри защититься оказывается недостаточной.", "Мощный Патронус отгоняет дементоров. Теряя сознание, Гарри думает, что увидел на другом берегу своего отца."],
+    say: "«Кто-то был на том берегу... Я видел. Кто-то призвал Патронуса. Сильного — сильнее моего. Это же было...»",
+    look: "Дементоры сгущаются над водой. Звёзды на поверхности озера рябят, будто от сильного мороза." },
+  { id: "hospital", title: "Больничное крыло", who: "hermione",
+    events: ["Гарри и Гермиона приходят в себя в больничном крыле; Рон остаётся на койке. Сириусу грозит Поцелуй дементора, а Петтигрю уже не предъявить как доказательство.", "Дамблдор даёт Гарри и Гермионе осторожный намёк. Гермиона показывает Маховик времени: с помощью него она весь год посещала дополнительные занятия."],
+    say: "«У меня есть способ всё исправить. Но это... вне правил. Вне всех правил. Дамблдор намекнул — а он никогда не намекает просто так.»",
+    look: "Рон на койке, его нога закреплена шиной. За окном стоит тишина — слишком долгая для такой ночи." },
+  { id: "time", title: "Возвращение во времени", who: "hermione",
+    events: ["Гарри и Гермиона возвращаются на несколько часов назад. Они прячутся возле хижины Хагрида и освобождают Клювокрыла до исполнения приговора.", "Наблюдая прошлые события со стороны, они стараются не встретиться с самими собой. Клювокрыл остаётся рядом, пока друзья ждут у леса."],
+    say: "«Тише. Мы не должны встретиться сами с собой — и не должны менять ничего, кроме нужного. Только Клювокрыл — и назад.»",
+    look: "Песочные часы на шее теплеют, и мир словно идёт вспять: луна ползёт назад, тени отступают к своим хозяевам." },
+  { id: "stag", title: "Патронус у озера", who: "harry",
+    events: ["Гарри ждёт появления спасителя у озера и понимает: на другом берегу он видел самого себя. Он выходит из укрытия и вызывает сильного Патронуса в форме оленя.", "Патронус отгоняет дементоров от Гарри, Гермионы и Сириуса из прошлого. Теперь у друзей есть время добраться до башни."],
+    say: "«Это был я. Я видел себя на том берегу. Значит, я могу это сделать — всегда мог. Рога... рога оленя, серебряные, огромные!»",
+    look: "Из тумана выходит олень — весь серебряный, как свет луны. Вода вокруг светится, и демоны тьмы отступают к деревьям." },
+  { id: "escape", title: "Освобождение Сириуса", who: "ron",
+    events: ["Гарри и Гермиона прилетают на Клювокрыле к окну, за которым заперт Сириус. Они помогают ему выбраться.", "Сириус улетает на Клювокрыле. Гарри и Гермиона возвращаются в больничное крыло вовремя; Рон не знает деталей, пока они не расскажут ему."],
+    say: "«Вы были в башне... и я даже не знал! А Клювокрыл — настоящий герой! Кто бы мог подумать, что гиппогриф спасёт человека!»",
+    look: "Сова приносит письмо; почерк на конверте быстрый и уверенный, а бумага — дорогая, тёмно-зелёная." },
+  { id: "farewell", title: "Конец учебного года", who: "harry",
+    events: ["На следующий день становится известно об отставке Люпина: тайна его превращений раскрылась. Гарри прощается с преподавателем.", "Гарри разговаривает с Дамблдором о Патронусе и Петтигрю. Сириус спасён, но официально оправдать его пока не удалось."],
+    say: "«Прощаться с Люпином тяжелее, чем я думал. Он был лучшим учителем за весь год. И другом — тоже.»",
+    look: "В замке собирают вещи, коридоры пустеют. Из окна кабинета Дамблдора лежит длинная тень от башни с часами." },
+  { id: "home", title: "Дорога домой", who: "hermione",
+    events: ["Хогвартс-экспресс везёт учеников домой. Гарри получает письмо от Сириуса: тот жив и вместе с Клювокрылом находится в безопасности.", "В письме есть разрешение Гарри посещать Хогсмид и объяснение происхождения Молнии. Маленькая сова остаётся у Рона. Учебный год завершён, но у Гарри теперь есть крёстный, который о нём заботится."],
+    say: "«Учебный год окончен. Но впереди целое лето — и ты всегда можешь написать нам. И Рону, и мне. Обязательно напиши.»",
+    look: "Хогвартс-экспресс набирает ход. В окне мелькает сова, летящая рядом с вагоном, и за ней — огни замка." }
+];
+
+// ================= API (n8n) =================
+
+let apiBase = "";
+let apiUserId = "";
+const newId = prefix => prefix + crypto.randomUUID().replace(/-/g, '');
+let pendingTurn = null;
+try { pendingTurn=JSON.parse(localStorage.getItem('hogwartsPendingTurn')||'null'); } catch (_) {}
+async function webRequest(url, payload) {
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),180000);
+  try {
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
+    let r; try {r=await res.json();} catch(_){throw Error('n8n вернул не JSON. Проверьте production webhook и активацию workflow.');}
+    if(!res.ok)throw Error(r.error||('HTTP '+res.status));
+    return r;
+  } finally {clearTimeout(timer);}
+}
+const api={
+ configure(url){
+  const next=String(url||'').trim().replace(/\/+$/,'');
+  if(apiBase&&next!==apiBase){pendingTurn=null;try{localStorage.removeItem('hogwartsPendingTurn')}catch(_){}}
+  apiBase=next;
+  if(apiBase&&!apiUserId)apiUserId=newId('web_');
+  try{localStorage.setItem('hogwartsApiUrl',apiBase);localStorage.setItem('hogwartsApiUserId',apiUserId)}catch(_){}
+ },
+ enabled(){return Boolean(apiBase)},url(){return apiBase},
+ async turn(payload){
+  if(pendingTurn&&JSON.stringify(pendingTurn.payload)!==JSON.stringify(payload))throw Error('Предыдущий ход не подтверждён. Нажмите ту же кнопку ещё раз с тем же текстом, чтобы безопасно получить результат.');
+  if(!pendingTurn){pendingTurn={payload,requestId:newId('req_')};try{localStorage.setItem('hogwartsPendingTurn',JSON.stringify(pendingTurn))}catch(_){}}
+  const r=await webRequest(apiBase,{userId:apiUserId,requestId:pendingTurn.requestId,...pendingTurn.payload});
+  pendingTurn=null;try{localStorage.removeItem('hogwartsPendingTurn')}catch(_){}return r;
+ },
+ async image(){
+  const url=apiBase.replace(/hogwarts-turn\/?$/,'hogwarts-image');
+  let id;try{id=localStorage.getItem('hogwartsPendingImage')}catch(_){}
+  if(!id){id=newId('img_');try{localStorage.setItem('hogwartsPendingImage',id)}catch(_){}}
+  for(let i=0;i<120;i++){
+   const r=await webRequest(url,{userId:apiUserId,requestId:id});
+   if(r.url||r.status==='completed'||r.status==='failed'){
+    try{localStorage.removeItem('hogwartsPendingImage')}catch(_){}return r;
+   }
+   if(r.status!=='processing')throw Error(r.error||'Статус задачи неизвестен. Проверьте историю Polza.');
+   await new Promise(resolve=>setTimeout(resolve,5000));
+  }
+  throw Error('Генерация ещё выполняется. Кнопка «Иллюстрация» продолжит проверку этой же задачи.');
+ }
+};
+try{apiUserId=localStorage.getItem('hogwartsApiUserId')||'';const url=localStorage.getItem('hogwartsApiUrl');if(url)api.configure(url)}catch(_){}
+
+// ================= СОСТОЯНИЕ =================
+
+const $ = (id) => document.getElementById(id);
+const chat = $("chat");
+const progressLine = $("progressLine");
+const topbar = $("topbar");
+const btnAdvance = $("btnAdvance");
+
+const FORM_LABELS = { m: "мужской род", f: "женский род", n: "без указания рода" };
+const FONT_SIZES = [16, 17, 18, 20, 22];
+const TRIO = ["harry", "ron", "hermione"];
+
+const state = {
+  name: "", form: "n",
+  sceneIdx: 0, evtIdx: 0,
+  acted: false, paused: false, ended: false, busy: false,
+  relations: { harry: 0, ron: 0, hermione: 0 },
+  effects: [],
+  fontIdx: 2, theme: "dark",
+  ai: null
+};
+
+const scene = () => SCENES[state.sceneIdx];
+
+function presentHere() {
+  return ["time", "stag", "escape"].includes(scene().id) ? ["harry", "hermione"] : TRIO.slice();
+}
+
+function sp(m, f, n) {
+  return state.form === "m" ? m : state.form === "f" ? f : n;
+}
+
+function scrollDown() {
+  requestAnimationFrame(() => {
+    chat.scrollTo({ top: chat.scrollHeight, behavior: "instant" });
+  });
+}
+
+function addBubble(kind, text, who) {
+  const el = document.createElement("div");
+  el.className = "msg " + kind;
+  if (kind === "char" && who) {
+    const nm = document.createElement("div");
+    nm.className = "name";
+    nm.textContent = who;
+    el.appendChild(nm);
+    const body = document.createElement("div");
+    body.className = "text";
+    body.textContent = text;
+    el.appendChild(body);
+  } else {
+    if (who) {
+      const label = document.createElement("div");
+      label.className = "who";
+      label.textContent = who;
+      el.appendChild(label);
+    }
+    const body = document.createElement("div");
+    body.className = "text";
+    body.textContent = text;
+    el.appendChild(body);
+  }
+  chat.appendChild(el);
+  scrollDown();
+}
+
+function addSceneCard(idx) {
+  const el = document.createElement("div");
+  el.className = "msg card";
+  const kicker = document.createElement("div");
+  kicker.className = "card-kicker";
+  kicker.textContent = "Эпизод " + (idx + 1) + " из " + SCENES.length;
+  const title = document.createElement("div");
+  title.className = "card-title";
+  title.textContent = SCENES[idx].title;
+  el.appendChild(kicker);
+  el.appendChild(title);
+  chat.appendChild(el);
+  scrollDown();
+}
+
+function addIllusCard(url, caption) {
+  const el = document.createElement("div");
+  el.className = "msg illus";
+  const art = document.createElement("div");
+  art.className = "illus-art";
+  if (url) {
+    art.classList.add("has-image");
+    const img = document.createElement("img");
+    img.className = "illus-image";
+    img.alt = caption || "Иллюстрация к истории";
+    img.addEventListener("load", scrollDown, { once: true });
+    img.addEventListener("error", () => {
+      img.hidden = true;
+      img.style.display = "none";
+      const link = document.createElement("a");
+      link.className = "illus-fallback";
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Не удалось показать изображение. Открыть картинку отдельно";
+      art.appendChild(link);
+      scrollDown();
+    }, { once: true });
+    img.src = url;
+    art.appendChild(img);
+  } else {
+    art.textContent = scene().title;
+  }
+  const cap = document.createElement("div");
+  cap.className = "illus-cap";
+  cap.textContent = caption || "Демо-заглушка. В полной версии здесь кинематографичное изображение текущего момента.";
+  el.appendChild(art);
+  el.appendChild(cap);
+  chat.appendChild(el);
+  scrollDown();
+}
+
+function updateProgress() {
+  const sc = scene();
+  const mode = state.ended ? "История завершена" : state.paused ? "На паузе" : (api.enabled() ? "AI-режим" : "Демо-режим без AI");
+  progressLine.textContent = mode + " · эпизод " + (state.sceneIdx + 1) + " из " + SCENES.length + " · " + sc.title;
+  updateDock();
+}
+
+function updateDock() {
+  for(const id of ['btnTalk','btnSay','btnLook','btnIllus','saySend','miReset','miProfile','miPause','miAI','aiConnect'])$(id).disabled=state.busy;
+  btnAdvance.disabled = state.ended || state.paused || state.busy;
+  btnAdvance.textContent = state.busy ? "Герои отвечают…" : state.ended ? "История завершена" : state.paused ? "История на паузе" : "Дальше →";
+}
+
+function addEffect(text) {
+  if (!state.effects.includes(text)) state.effects.push(text);
+  if (state.effects.length > 30) state.effects.shift();
+}
+
+// ================= AI-режим =================
+
+function renderBeats(beats) {
+  for (const b of beats) {
+    if (b.type === "dialogue") {
+      const name = ROSTER[b.character_id] ? ROSTER[b.character_id].name : "Герой";
+      addBubble("char", b.text, name);
+    } else {
+      addBubble("narrator", b.text);
+    }
+  }
+}
+
+function sendTurn(payload) {
+ if(!api.enabled())return Promise.resolve(false);
+ if(state.busy)return Promise.resolve(true);
+ state.busy=true;updateDock();
+ return api.turn({action:payload.action,text:payload.text||'',characterId:payload.characterId||'',profile:{name:state.name,form:state.form}}).then(r=>{
+  if(r.state)state.ai=r.state;
+  if(r.profile){state.name=r.profile.name;state.form=({masculine:'m',feminine:'f',neutral:'n'})[r.profile.address_form]||'n';}
+  if(typeof r.sceneIndex==='number'){
+   const next=Math.max(0,Math.min(SCENES.length-1,r.sceneIndex));
+   if(next!==state.sceneIdx){state.sceneIdx=next;addSceneCard(next)}
+   state.evtIdx=Number(r.sceneTurns)||0;
+  }
+  if(typeof r.paused==='boolean')state.paused=r.paused;
+  if(typeof r.ended==='boolean')state.ended=r.ended;
+  if(r.relations)state.relations=r.relations;
+  if(Array.isArray(r.effects))state.effects=r.effects;
+  if(r.transcript?.length){chat.innerHTML='';addSceneCard(state.sceneIdx);for(const m of r.transcript)addBubble(m.role==='user'?'user':'narrator',m.text);}
+  if(r.beats?.length)renderBeats(r.beats);
+  if(r.ok===false&&r.error&&!r.beats?.length)addBubble('narrator',r.error);
+  persistWebProfile();return true;
+ }).catch(e=>{addBubble('narrator','Ход не подтверждён: '+e.message+' Прогресс демо не изменён.');return true;})
+ .finally(()=>{state.busy=false;updateProgress();});
+}
+function persistWebProfile(){try{localStorage.setItem('hogwartsProfile',JSON.stringify({name:state.name,form:state.form}));}catch(_){}}
+
+// ================= СЮЖЕТ (демо) =================
+
+function renderEvent() {
+  addBubble("narrator", scene().events[state.evtIdx]);
+  state.acted = false;
+  updateProgress();
+}
+
+function advance() {
+  if (state.paused || state.ended) return;
+  const sc = scene();
+  if (state.evtIdx < sc.events.length - 1) {
+    state.evtIdx++;
+    renderEvent();
+    return;
+  }
+  if (state.sceneIdx < SCENES.length - 1) {
+    state.sceneIdx++;
+    state.evtIdx = 0;
+    addSceneCard(state.sceneIdx);
+    renderEvent();
+    return;
+  }
+  endStory();
+}
+
+function endStory() {
+  state.ended = true;
+  addBubble("narrator", "История завершена, " + state.name + ". Учебный год окончен, Сириус спасён, а у Гарри теперь есть крёстный. Можно пройти путь заново — снова в купе, снова у окна.");
+  updateProgress();
+}
+
+const NEUTRAL_LINES = [
+  (h, n) => h.name + ": Слушаю тебя, " + n + ". Что случилось?",
+  (h) => h.name + ": Хорошо, что мы можем поговорить. Давай разберёмся вместе.",
+  (h) => h.name + ": Поговорим об этом — только чуть позже, ладно?",
+  (h) => h.name + ": Это важно. Скажи ещё, я не упущу ни слова."
+];
+
+function talkTo(id) {
+  closeAll();
+  const hero = ROSTER[id];
+  const here = presentHere().includes(id);
+  addBubble("user", sp("Ты подошёл к ", "Ты подошла к ", "Ты подходишь к ") + hero.dat + ".");
+  if (id === scene().who) {
+    addBubble("char", scene().say, hero.name);
+  } else if (here) {
+    const line = NEUTRAL_LINES[Math.floor(Math.random() * NEUTRAL_LINES.length)];
+    addBubble("char", line(hero, state.name), hero.name);
+  } else {
+    addBubble("narrator", hero.name + " сейчас не рядом. Приложение не телепортирует героев: можно дождаться встречи или договориться о письме — но это твой выбор.");
+    return;
+  }
+  if (TRIO.includes(id) && here) state.relations[id] = Math.min(10, state.relations[id] + 1);
+  addEffect("Разговор с " + hero.name + " («" + scene().title + "»)");
+  updateProgress();
+}
+
+function talkToRemote(id) {
+  closeAll();
+  const hero = ROSTER[id];
+  addBubble("user", sp("Ты подошёл к ", "Ты подошла к ", "Ты подходишь к ") + hero.dat + ".");
+  return sendTurn({ action: "talk", characterId: id, text: "Разговор с персонажем: " + hero.name })
+    .then(function (ok) { if (!ok) talkTo(id); });
+}
+
+function renderTalkList(filter) {
+  const list = $("talkList");
+  list.innerHTML = "";
+  const q = (filter || "").trim().toLowerCase();
+  for (const id of Object.keys(ROSTER)) {
+    const hero = ROSTER[id];
+    if (q && !hero.name.toLowerCase().includes(q)) continue;
+    const here = presentHere().includes(id);
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "talk-item" + (here ? "" : " far");
+    const nm = document.createElement("span");
+    nm.textContent = hero.name;
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = api.enabled() ? "по сюжету" : (here ? "рядом" : "не рядом");
+    item.appendChild(nm);
+    item.appendChild(badge);
+    item.addEventListener("click", function () {
+      if (api.enabled()) { talkToRemote(id); } else { talkTo(id); }
+    });
+    list.appendChild(item);
+  }
+  if (!list.children.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted small";
+    empty.textContent = "Никого не нашлось. Попробуй другое имя.";
+    list.appendChild(empty);
+  }
+}
+
+const FREE_REPLIES = [
+  (hero, n) => hero.name + " слушает и кивает: «Слышу тебя, " + n + ".»",
+  (hero) => hero.name + " бросает взгляд, но разговор продолжается — история движется дальше.",
+  () => "На мгновение всё замирает, будто вагон прислушался к твоим словам.",
+  (hero) => hero.name + " усмехается: «Интересная мысль.»",
+  (hero, n) => hero.name + " отвечает: «Поговорим об этом, " + n + ", когда разберёмся с тем, что у нас происходит.»"
+];
+
+function sendFreeText() {
+  const text = $("sayText").value.trim();
+  if (!text) return;
+  $("sayText").value = "";
+  closeAll();
+  addBubble("user", text);
+  if (api.enabled()) {
+    sendTurn({ action: "chat", text: text }).then(function (ok) {
+      if (ok) return;
+      const hero = ROSTER[scene().who];
+      const reply = FREE_REPLIES[Math.floor(Math.random() * FREE_REPLIES.length)];
+      addBubble("narrator", reply(hero, state.name) + " (демо-реакция без AI)");
+      updateProgress();
+    });
+    return;
+  }
+  const hero = ROSTER[scene().who];
+  const reply = FREE_REPLIES[Math.floor(Math.random() * FREE_REPLIES.length)];
+  addBubble("narrator", reply(hero, state.name) + " (демо-реакция без AI)");
+  updateProgress();
+}
+
+function doLook() {
+  closeAll();
+  addBubble("user", sp("Ты осмотрелся.", "Ты осмотрелась.", "Ты осматриваешься."));
+  if (api.enabled()) {
+    sendTurn({ action: "look", text: "Осмотр места" }).then(function (ok) {
+      if (ok) return;
+      addBubble("narrator", scene().look);
+      updateProgress();
+    });
+    return;
+  }
+  addBubble("narrator", scene().look);
+  updateProgress();
+}
+
+function doIllustrate() {
+  closeAll();
+  addBubble("user", "*");
+  if (api.enabled()) {
+    state.busy = true;
+    updateDock();
+    api.image()
+      .then(function (r) {
+        state.busy = false;
+        if (r && (r.url || r.imageUrl)) {
+          addIllusCard(r.url || r.imageUrl, "Иллюстрация к сцене: " + scene().title);
+        } else {
+          addBubble("narrator", "Не удалось получить изображение: " + ((r && r.error) || "нет ответа от генератора."));
+        }
+        updateProgress();
+      })
+      .catch(function (e) {
+        state.busy = false;
+        addBubble("narrator", "Иллюстрация: " + e.message);
+        updateProgress();
+      });
+    return;
+  }
+  addIllusCard(null);
+}
+
+// ================= ШТОРКИ =================
+
+function closeAll() {
+  document.querySelectorAll(".overlay.show").forEach(function (o) { o.classList.remove("show"); });
+}
+function openOverlay(id) {
+  closeAll();
+  $(id).classList.add("show");
+}
+
+document.querySelectorAll("[data-close]").forEach(function (btn) {
+  btn.addEventListener("click", function () { $(btn.dataset.close).classList.remove("show"); });
+});
+document.querySelectorAll(".overlay").forEach(function (overlay) {
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay && overlay.id !== "onboarding") overlay.classList.remove("show");
+  });
+});
+
+// ================= ПРОФИЛЬ =================
+
+const NAME_RE = /^[\p{L}\p{M}\p{N} .'’\-]{1,40}$/u;
+let profileEdit = false;
+
+function openOnboarding(edit) {
+  profileEdit = edit;
+  $("obTitle").textContent = edit ? "Изменим профиль" : "Перед началом познакомимся";
+  $("obText").innerHTML = edit
+    ? "Имя и обращение влияют на то, как герои с тобой разговаривают."
+    : 'Фанатская интерактивная адаптация «Гарри Поттер и узник Азкабана». ' + (api.enabled() ? "<strong>AI-режим:</strong> ответы генерирует модель через n8n." : "<strong>Демо-режим:</strong> сцены и реплики заранее написаны вручную.");
+  $("nameInput").value = edit ? state.name : "";
+  $("nameError").textContent = "";
+  openOverlay("onboarding");
+}
+
+document.querySelectorAll("#onboarding [data-form]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    const name = $("nameInput").value.normalize("NFC").trim();
+    if (!name) {
+      $("nameError").textContent = "Сначала введите имя или прозвище.";
+      $("nameInput").focus();
+      return;
+    }
+    if (!NAME_RE.test(name) || !/[\p{L}\p{N}]/u.test(name)) {
+      $("nameError").textContent = "До 40 символов — без ссылок и специальных знаков.";
+      $("nameInput").focus();
+      return;
+    }
+    state.name = name;
+    state.form = btn.dataset.form;
+    closeAll();
+    persistWebProfile();
+    if (api.enabled()) {
+      closeAll();
+      sendTurn({action:profileEdit ? "profile" : "start"});
+      return;
+    }
+    if (profileEdit) {
+      addBubble("narrator", "Профиль обновлён. Герои будут обращаться к тебе как " + state.name + ".");
+    } else {
+      startStory();
+    }
+    updateProgress();
+  });
+});
+
+$("nameInput").addEventListener("input", function () { $("nameError").textContent = ""; });
+
+function startStory() {
+  if(api.enabled()){chat.innerHTML="";sendTurn({action:"reset"});return;}
+  chat.innerHTML = "";
+  state.sceneIdx = 0;
+  state.evtIdx = 0;
+  state.acted = false;
+  state.paused = false;
+  state.ended = false;
+  state.relations = { harry: 0, ron: 0, hermione: 0 };
+  state.effects = [];
+  state.ai = null;
+  addBubble("narrator",
+    "Колёса отстукивают мерный ритм; за стеклом плывут поля. Из коридора доносится приглушённый гул голосов. "
+    + "Рон отодвигает дорожную сумку и освобождает место.\n\nРон: " + state.name + ", садись к нам!\n\n"
+    + "Гермиона собирает учебники с сиденья и придерживает корзину с Живоглотом.\n\n"
+    + "Гермиона: Рада тебя видеть. Как прошло лето?\n\n"
+    + "Гарри поворачивается к двери и улыбается, давая тебе время ответить.");
+  addSceneCard(0);
+  renderEvent();
+}
+
+// ================= СТАТУС =================
+
+function fillStatus() {
+  const sc = scene();
+  $("stName").textContent = state.name || "—";
+  $("stForm").textContent = FORM_LABELS[state.form] || "—";
+  $("stScene").textContent = state.ended ? "История завершена" : (state.sceneIdx + 1) + " из " + SCENES.length + " — " + sc.title;
+  $("stEvents").textContent = (state.evtIdx + 1) + " из " + sc.events.length;
+  $("stMode").textContent = state.ended ? "Финал" : state.paused ? "Пауза" : (api.enabled() ? "AI-режим (n8n)" : "Демо");
+
+  const relBox = $("stRelations");
+  relBox.innerHTML = "";
+  for (const key of TRIO) {
+    const row = document.createElement("div");
+    row.className = "relation";
+    const nm = document.createElement("span");
+    nm.className = "rel-name";
+    nm.textContent = ROSTER[key].name;
+    const bar = document.createElement("div");
+    bar.className = "rel-bar";
+    const fill = document.createElement("div");
+    fill.className = "rel-fill";
+    fill.style.width = Math.round(((state.relations[key] + 10) / 20) * 100) + "%";
+    bar.appendChild(fill);
+    const val = document.createElement("span");
+    val.className = "rel-val";
+    val.textContent = String(state.relations[key]);
+    row.appendChild(nm); row.appendChild(bar); row.appendChild(val);
+    relBox.appendChild(row);
+  }
+
+  const effBox = $("stEffects");
+  effBox.innerHTML = "";
+  if (!state.effects.length) {
+    const li = document.createElement("li");
+    li.className = "muted";
+    li.textContent = "Пока пусто — последствия появятся после разговоров с героями.";
+    effBox.appendChild(li);
+  } else {
+    for (const e of state.effects.slice().reverse()) {
+      const li = document.createElement("li");
+      li.textContent = e;
+      effBox.appendChild(li);
+    }
+  }
+}
+
+// ================= МЕНЮ =================
+
+$("btnMenu").addEventListener("click", function () { openOverlay("sheetMenu"); });
+$("miStatus").addEventListener("click", function () { fillStatus(); openOverlay("modalStatus"); });
+$("miHelp").addEventListener("click", function () { openOverlay("modalHelp"); });
+$("miProfile").addEventListener("click", function () { openOnboarding(true); });
+
+$("miPause").addEventListener("click", function () {
+  if(api.enabled()){closeAll();sendTurn({action:state.paused?"resume":"pause"});return;}
+  state.paused = !state.paused;
+  $("miPause").textContent = state.paused ? "▶ Продолжить историю" : "⏸ Поставить на паузу";
+  addBubble("narrator", state.paused
+    ? "История на паузе. Можно поговорить с героями и осмотреться; события не продвигаются."
+    : "История снова развивается по ходу разговора. Кнопка «Дальше» покажет следующее событие.");
+  updateProgress();
+  closeAll();
+});
+
+let resetArmed = false;
+let resetTimer = null;
+
+$("miReset").addEventListener("click", function () {
+  const btn = $("miReset");
+  if (!resetArmed) {
+    resetArmed = true;
+    btn.textContent = "Точно начать заново?";
+    btn.classList.add("armed");
+    resetTimer = setTimeout(function () {
+      resetArmed = false;
+      btn.textContent = "Начать заново";
+      btn.classList.remove("armed");
+    }, 3000);
+    return;
+  }
+  clearTimeout(resetTimer);
+  resetArmed = false;
+  btn.textContent = "Начать заново";
+  btn.classList.remove("armed");
+  startStory();
+  closeAll();
+});
+
+// ================= AI-ПОДКЛЮЧЕНИЕ =================
+
+$("miAI").addEventListener("click", function () {
+  if (api.enabled()) {
+    api.configure("");
+    $("miAI").textContent = "🤖 Подключить AI (n8n)";
+    $("aiStatus").textContent = "Демо-режим: ответы без AI. Можно подключить n8n-воркфлоу.";
+    updateProgress();
+  } else {
+    $("aiUrlInput").value = api.url();
+    openOverlay("sheetAI");
+  }
+});
+
+$("aiConnect").addEventListener("click", function () {
+  const url = $("aiUrlInput").value.trim();
+  if (!/^https?:\/\//.test(url)) {
+    $("aiStatus").textContent = "Укажите полный адрес вебхука, например https://bunkanepudick.beget.app/webhook/hogwarts-turn";
+    return;
+  }
+  api.configure(url);
+  $("miAI").textContent = "🤖 AI подключён — выключить";
+  $("aiStatus").textContent = "AI-режим включён: " + url;
+  closeAll();
+  updateProgress();
+  // Create/synchronise the server-side web session before the first story turn.
+  if(state.name)sendTurn({ action: "sync" });else openOnboarding(false);
+});
+
+// ================= ШРИФТ И ТЕМА =================
+
+function applyFont() {
+  document.documentElement.style.setProperty("--reader", FONT_SIZES[state.fontIdx] + "px");
+  $("fontInd").textContent = FONT_SIZES[state.fontIdx] + "px";
+}
+
+$("fontMinus").addEventListener("click", function () {
+  state.fontIdx = Math.max(0, state.fontIdx - 1);
+  applyFont();
+});
+
+$("fontPlus").addEventListener("click", function () {
+  state.fontIdx = Math.min(FONT_SIZES.length - 1, state.fontIdx + 1);
+  applyFont();
+});
+
+$("themeToggle").addEventListener("click", function () {
+  state.theme = state.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = state.theme;
+  $("themeToggle").textContent = state.theme === "dark" ? "Сменить на светлую" : "Сменить на тёмную";
+});
+
+// ================= ДОК =================
+
+$("btnAdvance").addEventListener("click", function () {
+  if (api.enabled()) {
+    addBubble("user", "Дальше.");
+    sendTurn({ action: "advance", text: "." }).then(function (ok) {
+      if (!ok) advance();
+    });
+    return;
+  }
+  advance();
+});
+
+$("btnTalk").addEventListener("click", function () {
+  $("talkSearch").value = "";
+  renderTalkList("");
+  openOverlay("sheetTalk");
+});
+
+$("btnSay").addEventListener("click", function () {
+  openOverlay("sheetSay");
+  $("sayText").focus();
+});
+
+$("btnLook").addEventListener("click", doLook);
+$("btnIllus").addEventListener("click", doIllustrate);
+$("saySend").addEventListener("click", sendFreeText);
+$("talkSearch").addEventListener("input", function (e) { renderTalkList(e.target.value); });
+
+chat.addEventListener("scroll", function () {
+  topbar.classList.toggle("compact", chat.scrollTop > 40);
+});
+
+applyFont();
+updateProgress();
+
+})();
+</script>
+
+<script>
+(() => {
+  let pendingInstall;
+  const button = document.getElementById('installApp');
+  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (standalone()) button.hidden = true;
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault(); pendingInstall = event;
+  });
+  window.addEventListener('appinstalled', () => { pendingInstall = null; button.hidden = true; });
+  button.addEventListener('click', async () => {
+    if (pendingInstall) {
+      const prompt = pendingInstall; pendingInstall = null;
+      await prompt.prompt(); await prompt.userChoice;
+      return;
+    }
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    alert(location.protocol !== 'https:' && location.hostname !== 'localhost'
+      ? 'Для установки откройте приложение по HTTPS-адресу сайта.'
+      : ios
+        ? 'Откройте сайт в Safari. Нажмите «Поделиться» → «На экран Домой». Если есть переключатель «Открывать как веб-приложение», включите его. Запускайте приложение с новой иконки.'
+        : 'Откройте меню браузера → «Установить приложение» или «Добавить на главный экран». После установки запускайте приложение с новой иконки.');
+  });
+  if ('serviceWorker' in navigator && ['https:', 'http:'].includes(location.protocol)) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Service worker:', error));
+    });
+  }
+})();
+</script>
+</body>
+</html>
