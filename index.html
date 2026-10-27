@@ -818,7 +818,7 @@ h3 {
       реплики героев, последствия и прогресс. Ключи LLM остаются на сервере n8n.</p>
     <label class="field">
       <span>Адрес вебхука (turn)</span>
-      <input id="aiUrlInput" type="url" placeholder="https://bunkanepudick.beget.app/webhook/hogwarts-turn" autocomplete="off">
+      <input id="aiUrlInput" type="url" placeholder="Введите адрес вебхука" autocomplete="off">
     </label>
     <p class="muted small">Для иллюстраций воркфлоу должен обслуживать вебхук hogwarts-image на том же сервере.</p>
     <div class="actions static">
@@ -1634,7 +1634,7 @@ $("miAI").addEventListener("click", function () {
 $("aiConnect").addEventListener("click", function () {
   const url = $("aiUrlInput").value.trim();
   if (!/^https?:\/\//.test(url)) {
-    $("aiStatus").textContent = "Укажите полный адрес вебхука, например https://bunkanepudick.beget.app/webhook/hogwarts-turn";
+    $("aiStatus").textContent = "Укажите полный адрес вебхука, начинающийся с https://";
     return;
   }
   api.configure(url);
