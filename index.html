@@ -299,7 +299,8 @@ h3 {
 }
 
 .msg.user .text::before {
-  content: "вы";
+  content: "Я";
+  text-align: right;
   display: block;
   font-family: var(--ui);
   font-size: 0.58rem;
@@ -705,6 +706,8 @@ h3 {
   margin: 0 0 .35rem;
 }
 
+.chat::after { content: ""; display: block; flex: 0 0 var(--reading-space, 0px); }
+.chat > .msg.user .text::before { text-transform: none; text-align: right; }
 </style>
 </head>
 <body>
@@ -725,9 +728,7 @@ h3 {
   <footer class="dock">
     <button class="btn big primary" id="btnAdvance" type="button">Дальше →</button>
     <div class="dock-row">
-      <button class="btn" id="btnTalk" type="button">С героем</button>
       <button class="btn" id="btnSay" type="button">Реплика</button>
-      <button class="btn" id="btnLook" type="button">Осмотреться</button>
       <button class="btn" id="btnIllus" type="button">Иллюстрация</button>
     </div>
   </footer>
@@ -853,9 +854,7 @@ h3 {
     <h2>Как это работает</h2>
     <ul class="help">
       <li><strong>Дальше</strong> — показать следующее событие с переходом. Событие не продвигается само от числа реплик.</li>
-      <li><strong>С героем</strong> — диалог с любым персонажем реестра (37 героев). Если герой в сцене — он отвечает; если нет — приложение не телепортирует его.</li>
       <li><strong>Реплика</strong> — свободный текст: действие, вопрос, реплика. Попытка не считается автоматическим успехом.</li>
-      <li><strong>Осмотреться</strong> — зарисовка текущего места без влияния на сюжет.</li>
       <li><strong>Иллюстрация</strong> — изображение текущего момента (в демо — заглушка).</li>
       <li><strong>Меню</strong> — статус, пауза, профиль, размер шрифта, тема, AI-режим, рестарт.</li>
       <li>Повествование от второго лица: приложение не назначает тебе мысли и действия, которые ты не выбирал.</li>
@@ -1129,9 +1128,17 @@ function sp(m, f, n) {
   return state.form === "m" ? m : state.form === "f" ? f : n;
 }
 
+let scrollAnchor = null;
+let scrollScheduled = false;
 function scrollDown() {
+  if (!scrollAnchor) scrollAnchor = chat.lastElementChild;
+  if (scrollScheduled) return;
+  scrollScheduled = true;
   requestAnimationFrame(() => {
-    chat.scrollTo({ top: chat.scrollHeight, behavior: "instant" });
+    chat.style.setProperty('--reading-space', Math.max(0, chat.clientHeight - 64) + 'px');
+    const target = scrollAnchor;
+    if (target?.isConnected) chat.scrollTo({top: chat.scrollTop + target.getBoundingClientRect().top - chat.getBoundingClientRect().top - 16, behavior: 'instant'});
+    scrollAnchor = null; scrollScheduled = false;
   });
 }
 
@@ -1166,6 +1173,7 @@ function addBubble(kind, text, who) {
 function addSceneCard(idx) {
   const el = document.createElement("div");
   el.className = "msg card";
+  el.dataset.sceneIndex = idx;
   const kicker = document.createElement("div");
   kicker.className = "card-kicker";
   kicker.textContent = "Эпизод " + (idx + 1) + " из " + SCENES.length;
@@ -1181,6 +1189,8 @@ function addSceneCard(idx) {
 function addIllusCard(url, caption) {
   const el = document.createElement("div");
   el.className = "msg illus";
+  el.dataset.imageUrl = url || "";
+  el.dataset.caption = caption || "";
   const art = document.createElement("div");
   art.className = "illus-art";
   if (url) {
@@ -1188,7 +1198,7 @@ function addIllusCard(url, caption) {
     const img = document.createElement("img");
     img.className = "illus-image";
     img.alt = caption || "Иллюстрация к истории";
-    img.addEventListener("load", scrollDown, { once: true });
+    img.addEventListener("load", () => { cacheIllustration(url); scrollDown(); }, { once: true });
     img.addEventListener("error", () => {
       img.hidden = true;
       img.style.display = "none";
@@ -1212,6 +1222,7 @@ function addIllusCard(url, caption) {
   el.appendChild(art);
   el.appendChild(cap);
   chat.appendChild(el);
+  restoreIllustration(art.querySelector("img"), url);
   scrollDown();
 }
 
@@ -1223,7 +1234,7 @@ function updateProgress() {
 }
 
 function updateDock() {
-  for(const id of ['btnTalk','btnSay','btnLook','btnIllus','saySend','miReset','miProfile','miPause','miAI','aiConnect'])$(id).disabled=state.busy;
+  for(const id of ['btnTalk','btnSay','btnLook','btnIllus','saySend','miReset','miProfile','miPause','miAI','aiConnect'])if($(id))$(id).disabled=state.busy;
   btnAdvance.disabled = state.ended || state.paused || state.busy;
   btnAdvance.textContent = state.busy ? "Герои отвечают…" : state.ended ? "История завершена" : state.paused ? "История на паузе" : "Дальше →";
 }
@@ -1262,7 +1273,15 @@ function sendTurn(payload) {
   if(typeof r.ended==='boolean')state.ended=r.ended;
   if(r.relations)state.relations=r.relations;
   if(Array.isArray(r.effects))state.effects=r.effects;
-  if(r.transcript?.length){chat.innerHTML='';addSceneCard(state.sceneIdx);for(const m of r.transcript)addBubble(m.role==='user'?'user':'narrator',m.text);}
+  if(Array.isArray(r.transcript)) {
+   if(!chat.children.length){addSceneCard(state.sceneIdx);for(const m of r.transcript)addBubble(m.role==='user'?'user':'narrator',m.text);}
+   else {
+    const local=[...chat.querySelectorAll('.text')].map(el=>el.textContent).join('\n\n');
+    let boundary=-1;
+    for(let i=r.transcript.length-1;i>=0;i--){if(local.includes(r.transcript[i].text)){boundary=i;break;}}
+    if(boundary>=0)for(const m of r.transcript.slice(boundary+1))addBubble(m.role==='user'?'user':'narrator',m.text);
+   }
+  }
   if(r.beats?.length)renderBeats(r.beats);
   if(r.ok===false&&r.error&&!r.beats?.length)addBubble('narrator',r.error);
   persistWebProfile();return true;
@@ -1535,7 +1554,7 @@ function fillStatus() {
   $("stName").textContent = state.name || "—";
   $("stForm").textContent = FORM_LABELS[state.form] || "—";
   $("stScene").textContent = state.ended ? "История завершена" : (state.sceneIdx + 1) + " из " + SCENES.length + " — " + sc.title;
-  $("stEvents").textContent = (state.evtIdx + 1) + " из " + sc.events.length;
+  $("stEvents").textContent = Math.min(sc.events.length, api.enabled() ? state.evtIdx : state.evtIdx + 1) + " из " + sc.events.length;
   $("stMode").textContent = state.ended ? "Финал" : state.paused ? "Пауза" : (api.enabled() ? "AI-режим (n8n)" : "Демо");
 
   const relBox = $("stRelations");
@@ -1682,7 +1701,7 @@ $("btnAdvance").addEventListener("click", function () {
   advance();
 });
 
-$("btnTalk").addEventListener("click", function () {
+$("btnTalk")?.addEventListener("click", function () {
   $("talkSearch").value = "";
   renderTalkList("");
   openOverlay("sheetTalk");
@@ -1693,7 +1712,7 @@ $("btnSay").addEventListener("click", function () {
   $("sayText").focus();
 });
 
-$("btnLook").addEventListener("click", doLook);
+$("btnLook")?.addEventListener("click", doLook);
 $("btnIllus").addEventListener("click", doIllustrate);
 $("saySend").addEventListener("click", sendFreeText);
 $("talkSearch").addEventListener("input", function (e) { renderTalkList(e.target.value); });
@@ -1701,6 +1720,44 @@ $("talkSearch").addEventListener("input", function (e) { renderTalkList(e.target
 chat.addEventListener("scroll", function () {
   topbar.classList.toggle("compact", chat.scrollTop > 40);
 });
+
+
+function chatStorageKey(){return 'hogwartsChat:'+ (api.url()||'demo') + ':' + (apiUserId||'local');}
+function saveLocalChat(){
+ const entries=[...chat.children].map(el=>{
+  if(el.dataset.imageUrl)return {kind:'image',url:el.dataset.imageUrl,caption:el.dataset.caption};
+  if(el.classList.contains('illus'))return null;
+  if(el.classList.contains('card'))return {kind:'card',idx:Number(el.dataset.sceneIndex||0)};
+  const text=el.querySelector('.text');if(!text)return null;
+  return {kind:el.classList.contains('user')?'user':el.classList.contains('char')?'char':'narrator',text:text.textContent,who:el.querySelector('.name,.who')?.textContent};
+ }).filter(Boolean);
+ try{localStorage.setItem(chatStorageKey(),JSON.stringify(entries));}catch(e){console.warn('Chat storage unavailable',e);}
+}
+function restoreLocalChat(){
+ try{const entries=JSON.parse(localStorage.getItem(chatStorageKey())||'[]');
+ for(const m of entries){if(m.kind==='image')addIllusCard(m.url,m.caption);else if(m.kind==='card')addSceneCard(m.idx);else if(['user','char','narrator'].includes(m.kind))addBubble(m.kind,m.text,m.who);}
+ return entries.length>0;
+ }catch(_){return false;}
+}
+async function cacheIllustration(url){
+ try{const cache=await caches.open('hogwarts-illustrations-v1');if(await cache.match(url))return;
+ const response=await fetch(url,{mode:'cors'});if(response.ok)await cache.put(url,response);
+ }catch(_){}
+}
+async function restoreIllustration(img,url){
+ try{const cache=await caches.open('hogwarts-illustrations-v1');const response=await cache.match(url);
+ if(response&&img){const blobURL=URL.createObjectURL(await response.blob());img.src=blobURL;img.addEventListener('load',()=>URL.revokeObjectURL(blobURL),{once:true});}
+ }catch(_){}
+}
+new MutationObserver(saveLocalChat).observe(chat,{childList:true,subtree:true});
+window.addEventListener('pagehide',saveLocalChat);
+try{
+ const profile=JSON.parse(localStorage.getItem('hogwartsProfile')||'null');
+ if(profile&&NAME_RE.test(profile.name)&&['m','f','n'].includes(profile.form)){
+  state.name=profile.name;state.form=profile.form;closeAll();restoreLocalChat();
+  if(api.enabled())sendTurn({action:'sync'});else if(!chat.children.length)startStory();
+ }
+}catch(_){}
 
 applyFont();
 updateProgress();
